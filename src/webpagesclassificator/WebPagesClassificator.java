@@ -15,18 +15,16 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
-import java.util.Arrays;
+
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+
 import java.util.Stack;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import sun.misc.IOUtils;
+
 
 /**
  *
@@ -118,10 +116,11 @@ public class WebPagesClassificator {
                 db.add(h);
                 System.out.println(h); 
                 System.out.println(categ);
+                System.out.println(dati.url.get(k));
                 h.clear();
                 h = null;
                 h = new HashMap<String, Integer>();
-                System.out.println(h.size());
+
                 
             }       
 
