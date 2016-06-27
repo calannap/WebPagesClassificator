@@ -16,9 +16,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 
 import java.util.Stack;
@@ -46,6 +49,8 @@ public class WebPagesClassificator {
         Set TS = new Set();
 
         Random rn = new Random();
+        
+
 
         for (int i = 0; i < dati.cat.size(); i++) {
             if ((rn.nextInt(max - min + 1) + min) >= 80) {
@@ -58,32 +63,14 @@ public class WebPagesClassificator {
         }
 
 
-        System.out.println(TS.cat.size());
-        System.out.println(CS.cat.size());
+
 
         List<WebSites> CSlist = getTokens(CS);
         List<WebSites> TSlist = getTokens(TS);
-        
-        System.out.println(TSlist+" "+CSlist.size());
-        
-        for ( int i=0;i<TSlist.size();i++)
-        {
-            for (float f : TSlist.get(i).count.values()) {
-                total += f;
-                }
-            //int j=0;j<TSlist.get(i).count.size();j++
 
-            for ( String s : TSlist.get(i).count.keySet() )
-            {
-                TSlist.get(i).count.replace(s, (TSlist.get(i).count.get(s)/total));
-            }
-            total=0;
-        }
-        
-        for (int k=0;k<TSlist.size();k++){
-            System.out.println(TSlist.get(k).cat);
-                System.out.println(TSlist.get(k).count);
-        }
+        boolean truep=false;
+        for (int i=0;i<CSlist.size();i++)
+         truep= Classify(CSlist.get(i),TSlist);
     }
 
     public static int getIndex(String s) {
@@ -102,13 +89,14 @@ public class WebPagesClassificator {
 
         String categ = temp.cat.get(0);
         int val = getIndex(temp.cat.get(0));
+        categ = categ.substring(0,val);
         String text = null;
         List<WebSites> db= new ArrayList<WebSites>();;
         for (int k = 0; k < temp.url.size(); k++) {
 
  
             HashMap<String, Float> h = new HashMap<String, Float>();
-
+            
             URL oracle = new URL(temp.url.get(k));
             try {
                 BufferedReader in = new BufferedReader(new InputStreamReader(oracle.openStream()));
@@ -159,14 +147,15 @@ public class WebPagesClassificator {
 
                 }
 
-                text = null;
-                if (!categ.equals(temp.cat.get(k).substring(0, val))) {
 
+                text = null;
+                if (!categ.equals(temp.cat.get(k+1).substring(0, val))) {
 
                     db.add(new WebSites(h,categ));
-                    val = getIndex(temp.cat.get(k));
-                    categ = temp.cat.get(k).substring(0, val);
+                    val = getIndex(temp.cat.get(k+1));
+                    categ = temp.cat.get(k+1).substring(0, val);
                     h = new HashMap<String, Float>();
+                    
 
                 }
 
@@ -175,8 +164,61 @@ public class WebPagesClassificator {
             }
 
         }
-        System.out.println("Grandezza db: "+db.size());
         return db;
+    }
+    
+    public static boolean Classify(WebSites h, List<WebSites> TS)
+    {
+        
+        HashMap<String, Float> map = new HashMap<String, Float>();
+        int occ=0;
+        for (int i=0;i<TS.size();i++)
+            map.put(TS.get(i).cat, 0.0f);
+        
+
+        for (String s : h.count.keySet() )
+        {
+            for (int i=0;i<TS.size();i++)
+            {  
+                if(TS.get(i).count.get(s) != null)
+                {
+                    occ=(int) (occ+TS.get(i).count.get(s));
+                }
+                
+            }
+            for (int i=0;i<TS.size();i++)
+            {
+
+                if(occ>0 && TS.get(i).count.get(s) != null)
+                {
+                    
+                   // System.out.println("La stringa "+s+" ha frequenza "+(TS.get(i).count.get(s)/occ)*(TS.get(i).count.size())+"appare in questa cat "+ TS.get(i).count.get(s)+" volte, nella sua cat ci sono "+TS.get(i).count.size()+" parole. In tutte le cat "+occ+" parole");
+                    map.replace(TS.get(i).cat, map.get(TS.get(i).cat)+(TS.get(i).count.get(s)/occ)*(TS.get(i).count.size()));
+                
+                }
+            }
+            occ=0;
+        }
+        
+
+        
+        Map.Entry<String, Float> maxEntry = null;
+
+        for (Map.Entry<String, Float> entry : map.entrySet())
+        {
+            if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) > 0)
+            {
+                maxEntry = entry;
+            }
+        }       
+        
+        
+        System.out.println("Predicted: "+maxEntry+" Actual category: "+h.cat);     // Print the key with max value
+            
+        
+
+
+        return false;
     }
 
 }
