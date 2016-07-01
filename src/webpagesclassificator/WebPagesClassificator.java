@@ -130,15 +130,22 @@ public class WebPagesClassificator {
             System.out.println(temp.url.get(k).substring(7,temp.url.get(k).length()-1));
             if( connection.getResponseCode()==200){
 
-                           System.out.println(oracle);
-
-                
+                    
+                    System.out.println(oracle);
+                    
+                    System.out.println("I smell the memems");
                     BufferedReader in = new BufferedReader(new InputStreamReader(oracle.openStream()));
+                    System.out.println(in.readLine());
+                    System.out.println("I need the memems");
                     String inputLine;
+                    
+                    if(in.ready())
                     while ((inputLine = in.readLine()) != null) {
+                        System.out.println("Increase text");
                         text = text + inputLine;
                     }
-
+      
+                    System.out.println("Fine increase text");
                     in.close();
                     Document doc = Jsoup.parse(text);
                     String s = doc.body().text();
