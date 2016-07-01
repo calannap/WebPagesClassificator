@@ -23,6 +23,10 @@ import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.ProtocolException;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +52,7 @@ public class WebPagesClassificator {
         
         float total=0.0f;
         int index = 0, min = 1, max = 100;
-      /*  LinkExtractor l1 = new LinkExtractor("C://Users/Lee/Desktop/dati.u8");
+       LinkExtractor l1 = new LinkExtractor("C://Users/Lee/Desktop/dati.u8");
         Set dati = l1.getLinks();
         Set CS = new Set();
         Set TS = new Set();
@@ -75,10 +79,10 @@ public class WebPagesClassificator {
         List<WebSites> TSlist = getTokens(TS,false);
 
         saveFile(CSlist,"C:\\Users\\Lee\\Desktop\\CS.ser");
-        saveFile(TSlist,"C:\\Users\\Lee\\Desktop\\TS.ser");*/
+        saveFile(TSlist,"C:\\Users\\Lee\\Desktop\\TS.ser");
         
-        List<WebSites> CSlist = loadFile("C:\\Users\\Lee\\Desktop\\CS.ser");
-        List<WebSites> TSlist = loadFile("C:\\Users\\Lee\\Desktop\\TS.ser");
+        //List<WebSites> CSlist = loadFile("C:\\Users\\Lee\\Desktop\\CS.ser");
+       // List<WebSites> TSlist = loadFile("C:\\Users\\Lee\\Desktop\\TS.ser");
         
 
         System.out.println("Nel CS ci sono "+CSlist.size()+" siti");
@@ -107,7 +111,7 @@ public class WebPagesClassificator {
         return val;
     }
 
-    public static List<WebSites> getTokens(Set temp, boolean iscs) throws MalformedURLException {
+    public static List<WebSites> getTokens(Set temp, boolean iscs) throws MalformedURLException, ProtocolException, IOException {
 
         String categ = temp.cat.get(0);
         int val = getIndex(temp.cat.get(0));
@@ -116,77 +120,82 @@ public class WebPagesClassificator {
         List<WebSites> db= new ArrayList<WebSites>();;
         for (int k = 0; k < temp.url.size(); k++) {
 
+        try {
             System.out.println(k+" of "+temp.url.size());
- 
-            HashMap<String, Float> h = new HashMap<String, Float>();
-            
             URL oracle = new URL(temp.url.get(k));
-            try {
-                BufferedReader in = new BufferedReader(new InputStreamReader(oracle.openStream()));
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    text = text + inputLine;
-                }
+            HttpURLConnection connection = null;
+            connection = (HttpURLConnection) oracle.openConnection();
+            connection.setRequestMethod("HEAD");
+            HashMap<String, Float> h = new HashMap<String, Float>();
+            System.out.println(temp.url.get(k).substring(7,temp.url.get(k).length()-1));
+            if( connection.getResponseCode()==200){
 
-                in.close();
-                Document doc = Jsoup.parse(text);
-                String s = doc.body().text();
+                           System.out.println(oracle);
 
-                int j = 0;
-                boolean beenthere = false;
-                Stack stack = new Stack();
-                Pattern p1 = Pattern.compile("[a-zA-Z0-9'$€-]");
-                Pattern p2 = Pattern.compile("[0-9]");
-                char[] schr = s.toCharArray();
-                char[] token = null;
-
-                String tmp;
-
-                for (int i = 0; i < s.length(); i++) {
-                    tmp = s.substring(i, i + 1);
-
-                    if (p1.matcher(tmp).find() && !p2.matcher(tmp).find()) {
-                        stack.push(schr[i]);
-                    } else if (stack.size() != 0) {
-                        beenthere = true;
-                        token = new char[stack.size()];
-                        j = 0;
-                        while (!stack.isEmpty()) {
-                            token[j++] = (char) stack.pop();
-                        }
-
-                        String[] tokens = new String[j];
-                        String tmp2 = String.valueOf(token);
-                        tmp2 = new StringBuilder(tmp2).reverse().toString();
-                        tmp2 = tmp2.toLowerCase();
-                        if(tmp2.length()>1 && !tmp.equals("null")){
-                        if (h.get(tmp2) == null) {
-                            h.put(tmp2, 1.0f);
-                        } else {
-                            h.replace(tmp2, h.get(tmp2) + 1);
-                        }
-                        }
+                
+                    BufferedReader in = new BufferedReader(new InputStreamReader(oracle.openStream()));
+                    String inputLine;
+                    while ((inputLine = in.readLine()) != null) {
+                        text = text + inputLine;
                     }
 
-                }
+                    in.close();
+                    Document doc = Jsoup.parse(text);
+                    String s = doc.body().text();
+
+                    int j = 0;
+                    boolean beenthere = false;
+                    Stack stack = new Stack();
+                    Pattern p1 = Pattern.compile("[a-zA-Z0-9'$€-]");
+                    Pattern p2 = Pattern.compile("[0-9]");
+                    char[] schr = s.toCharArray();
+                    char[] token = null;
+
+                    String tmp;
+
+                    for (int i = 0; i < s.length(); i++) {
+                        tmp = s.substring(i, i + 1);
+
+                        if (p1.matcher(tmp).find() && !p2.matcher(tmp).find()) {
+                            stack.push(schr[i]);
+                        } else if (stack.size() != 0) {
+                            beenthere = true;
+                            token = new char[stack.size()];
+                            j = 0;
+                            while (!stack.isEmpty()) {
+                                token[j++] = (char) stack.pop();
+                            }
+
+                            String[] tokens = new String[j];
+                            String tmp2 = String.valueOf(token);
+                            tmp2 = new StringBuilder(tmp2).reverse().toString();
+                            tmp2 = tmp2.toLowerCase();
+                            if(tmp2.length()>1 && !tmp.equals("null")){
+                            if (h.get(tmp2) == null) {
+                                h.put(tmp2, 1.0f);
+                            } else {
+                                h.replace(tmp2, h.get(tmp2) + 1);
+                            }
+                            }
+                        }
+
+                    }
 
 
-                text = null;
-                if (!categ.equals(temp.cat.get(k+1).substring(0, val)) || iscs) {
+                    text = null;
+                    if (!categ.equals(temp.cat.get(k+1).substring(0, val)) || iscs) {
 
-                    db.add(new WebSites(h,categ));
-                    val = getIndex(temp.cat.get(k+1));
-                    categ = temp.cat.get(k+1).substring(0, val);
-                    h = new HashMap<String, Float>();
-                    
+                        db.add(new WebSites(h,categ));
+                        val = getIndex(temp.cat.get(k+1));
+                        categ = temp.cat.get(k+1).substring(0, val);
+                        h = new HashMap<String, Float>();
 
-                }
 
-            } catch (Exception e) {
-                e.toString();
+                    }
+                    }
+                } catch (Exception e) {e.toString();}
             }
-
-        }
+        
         return db;
     }
     
@@ -308,5 +317,8 @@ public class WebPagesClassificator {
 	   } 
     
     }
+    
 
 }
+
+
