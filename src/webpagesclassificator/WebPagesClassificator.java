@@ -7,7 +7,9 @@ package webpagesclassificator;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,7 +19,10 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
-
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,12 +48,13 @@ public class WebPagesClassificator {
         
         float total=0.0f;
         int index = 0, min = 1, max = 100;
-        LinkExtractor l1 = new LinkExtractor("C://Users/Lee/Desktop/dati.u8");
+      /*  LinkExtractor l1 = new LinkExtractor("C://Users/Lee/Desktop/dati.u8");
         Set dati = l1.getLinks();
         Set CS = new Set();
         Set TS = new Set();
 
-        Random rn = new Random();
+        System.out.println(dati.cat.size());
+       Random rn = new Random();
         
 
 
@@ -62,15 +68,31 @@ public class WebPagesClassificator {
             }
         }
 
+        System.out.println("Nel CS ci sono "+CS.cat.size()+" siti");
+        System.out.println("Nel TS ci sono "+TS.cat.size()+" siti");
 
+        List<WebSites> CSlist = getTokens(CS,true);
+        List<WebSites> TSlist = getTokens(TS,false);
 
+        saveFile(CSlist,"C:\\Users\\Lee\\Desktop\\CS.ser");
+        saveFile(TSlist,"C:\\Users\\Lee\\Desktop\\TS.ser");*/
+        
+        List<WebSites> CSlist = loadFile("C:\\Users\\Lee\\Desktop\\CS.ser");
+        List<WebSites> TSlist = loadFile("C:\\Users\\Lee\\Desktop\\TS.ser");
+        
 
-        List<WebSites> CSlist = getTokens(CS);
-        List<WebSites> TSlist = getTokens(TS);
-
+        System.out.println("Nel CS ci sono "+CSlist.size()+" siti");
+        System.out.println("Nel TS ci sono "+TSlist.size()+" categorie");
+        int tr=0;
         boolean truep=false;
+
         for (int i=0;i<CSlist.size();i++)
+        {
          truep= Classify(CSlist.get(i),TSlist);
+         if(truep)
+             tr++;
+        }
+        System.out.println("TP: "+tr+" su "+CSlist.size());
     }
 
     public static int getIndex(String s) {
@@ -85,7 +107,7 @@ public class WebPagesClassificator {
         return val;
     }
 
-    public static List<WebSites> getTokens(Set temp) throws MalformedURLException {
+    public static List<WebSites> getTokens(Set temp, boolean iscs) throws MalformedURLException {
 
         String categ = temp.cat.get(0);
         int val = getIndex(temp.cat.get(0));
@@ -94,6 +116,7 @@ public class WebPagesClassificator {
         List<WebSites> db= new ArrayList<WebSites>();;
         for (int k = 0; k < temp.url.size(); k++) {
 
+            System.out.println(k+" of "+temp.url.size());
  
             HashMap<String, Float> h = new HashMap<String, Float>();
             
@@ -136,20 +159,20 @@ public class WebPagesClassificator {
                         String tmp2 = String.valueOf(token);
                         tmp2 = new StringBuilder(tmp2).reverse().toString();
                         tmp2 = tmp2.toLowerCase();
-
+                        if(tmp2.length()>1 && !tmp.equals("null")){
                         if (h.get(tmp2) == null) {
                             h.put(tmp2, 1.0f);
                         } else {
                             h.replace(tmp2, h.get(tmp2) + 1);
                         }
-
+                        }
                     }
 
                 }
 
 
                 text = null;
-                if (!categ.equals(temp.cat.get(k+1).substring(0, val))) {
+                if (!categ.equals(temp.cat.get(k+1).substring(0, val)) || iscs) {
 
                     db.add(new WebSites(h,categ));
                     val = getIndex(temp.cat.get(k+1));
@@ -192,33 +215,98 @@ public class WebPagesClassificator {
                 if(occ>0 && TS.get(i).count.get(s) != null)
                 {
                     
-                   // System.out.println("La stringa "+s+" ha frequenza "+(TS.get(i).count.get(s)/occ)*(TS.get(i).count.size())+"appare in questa cat "+ TS.get(i).count.get(s)+" volte, nella sua cat ci sono "+TS.get(i).count.size()+" parole. In tutte le cat "+occ+" parole");
-                    map.replace(TS.get(i).cat, map.get(TS.get(i).cat)+(TS.get(i).count.get(s)/occ)*(TS.get(i).count.size()));
+                   // occ=(int) Math.sqrt(occ);   
+                    float freqCat = (((TS.get(i).count.get(s)*TS.get(i).count.get(s))/occ)*1/TS.get(i).count.size());
+                    // System.out.println("La stringa "+s+" ha frequenza "+freqCat+" appare in "+TS.get(i).cat+" "+ TS.get(i).count.get(s)+" volte, nella sua cat ci sono "+TS.get(i).count.size()+" parole. In tutte le cat appare "+occ+" volte");
+                   
+                    map.replace(TS.get(i).cat, map.get(TS.get(i).cat)+(freqCat));
                 
                 }
             }
             occ=0;
         }
         
-
+      
         
-        Map.Entry<String, Float> maxEntry = null;
+        Map.Entry<String, Float> maxEntry1 = null;
+        Map.Entry<String, Float> maxEntry2 = null;
+        Map.Entry<String, Float> maxEntry3 = null;
 
         for (Map.Entry<String, Float> entry : map.entrySet())
         {
-            if (maxEntry == null || entry.getValue().compareTo(maxEntry.getValue()) > 0)
+            if (maxEntry1 == null || entry.getValue().compareTo(maxEntry1.getValue()) > 0)
             {
-                maxEntry = entry;
+                maxEntry1 = entry;
+                
             }
         }       
-        
-        
-        System.out.println("Predicted: "+maxEntry+" Actual category: "+h.cat);     // Print the key with max value
-            
-        
+        map.remove(maxEntry1.getKey());
 
+        for (Map.Entry<String, Float> entry : map.entrySet())
+        {
+            if (maxEntry2 == null || entry.getValue().compareTo(maxEntry2.getValue()) > 0)
+            {
+                maxEntry2 = entry;
+                
+            }
+        }     
+        map.remove(maxEntry2.getKey());
 
+        for (Map.Entry<String, Float> entry : map.entrySet())
+        {
+            if (maxEntry3 == null || entry.getValue().compareTo(maxEntry3.getValue()) > 0)
+            {
+                maxEntry3 = entry;
+                
+            }
+        }     
+        map.remove(maxEntry3.getKey());
+
+        
+      //  System.out.println("Predicted: "+maxEntry.getKey()+" Actual category: "+h.cat);     // Print the key with max value
+  
+        if(maxEntry1.getKey().equals(h.cat) || maxEntry2.getKey().equals(h.cat) || maxEntry3.getKey().equals(h.cat))
+            return true;
+        
         return false;
+
+
+    }
+    
+    public static void saveFile(Object c,String s)
+    {
+                try{
+		   
+		FileOutputStream fout = new FileOutputStream(s);
+		ObjectOutputStream oos = new ObjectOutputStream(fout);   
+		oos.writeObject(c);
+		oos.close();
+		System.out.println("Done");
+		   
+	   }catch(Exception ex){
+		   ex.printStackTrace();
+	   }
+              
+    }
+    
+    public static List<WebSites> loadFile(String s)
+    {
+        	   List<WebSites> address;
+	 
+	   try{
+		    
+		   FileInputStream fin = new FileInputStream(s);
+		   ObjectInputStream ois = new ObjectInputStream(fin);
+		   address = (List<WebSites>) ois.readObject();
+		   ois.close();
+		  
+		   return address;
+		   
+	   }catch(Exception ex){
+		   ex.printStackTrace();
+		   return null;
+	   } 
+    
     }
 
 }

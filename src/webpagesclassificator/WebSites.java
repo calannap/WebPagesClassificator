@@ -5,13 +5,14 @@
  */
 package webpagesclassificator;
 
+import java.io.Serializable;
 import java.util.HashMap;
 
 /**
  *
  * @author Lee
  */
-public class WebSites 
+public class WebSites implements Serializable
     {
          HashMap<String, Float> count = new HashMap<String, Float>();
          String cat=null;

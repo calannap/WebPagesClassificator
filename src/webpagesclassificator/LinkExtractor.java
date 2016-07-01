@@ -84,11 +84,21 @@ public class LinkExtractor {
 
    
 
-   for( int i=0; i<CS.cat.size();i=i+100000)
+   for( int i=0; i<CS.cat.size();i=i+5000)
    {
-       finalCS.cat.add(CS.cat.get(i));
-       finalCS.url.add(CS.url.get(i));
+       
 
+    String s = CS.cat.get(i);
+    int counter = 0;
+    /*for( int q=0; q<s.length(); q++ ) {
+        if( s.charAt(q) == '/' ) {
+            counter++;
+        } 
+    }
+       if(counter<=3){*/
+        finalCS.cat.add(CS.cat.get(i));
+        finalCS.url.add(CS.url.get(i));
+       //}
    }
    
 
