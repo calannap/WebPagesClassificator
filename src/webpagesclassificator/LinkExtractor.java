@@ -84,7 +84,7 @@ public class LinkExtractor {
 
    
 
-   for( int i=0; i<CS.cat.size();i=i+100)
+   for( int i=0; i<CS.cat.size();i=i+500)
    {
        
 

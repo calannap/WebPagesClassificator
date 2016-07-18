@@ -55,7 +55,7 @@ public class WebPagesClassificator {
        
             List<WebSites> CSlist;
             List<WebSites> TSlist;
-            if(true){
+            if(!true){
 
             float total=0.0f;
             int index = 0, min = 1, max = 100;
@@ -276,7 +276,7 @@ public class WebPagesClassificator {
       System.out.println(h.count+"\n");
       
       
-        if(maxEntry1.getKey().equals(h.cat) || maxEntry2.getKey().equals(h.cat)|| maxEntry3.getKey().equals(h.cat) )
+        if(maxEntry1.getKey().equals(h.cat)  )
             return true;
         
         return false;
