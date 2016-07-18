@@ -16,11 +16,13 @@ public class WebSites implements Serializable
     {
          HashMap<String, Float> count = new HashMap<String, Float>();
          String cat=null;
+         String html = null;
          
-    public WebSites(HashMap<String, Float> a, String b)
+    public WebSites(HashMap<String, Float> a, String b, String c)
     {
         count = a;
         cat = b;
+        html = c ;
     }
 
 

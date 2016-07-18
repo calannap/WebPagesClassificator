@@ -34,6 +34,9 @@ import java.util.Map.Entry;
 import java.util.Random;
 
 import java.util.Stack;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import java.util.regex.Pattern;
 import org.jsoup.Jsoup;
@@ -49,54 +52,68 @@ public class WebPagesClassificator {
      * @param args the command line arguments
      */
     public static void main(String[] args) throws FileNotFoundException, IOException, Exception {
-        
-        float total=0.0f;
-        int index = 0, min = 1, max = 100;
-       LinkExtractor l1 = new LinkExtractor("C://Users/Lee/Desktop/dati.u8");
-        Set dati = l1.getLinks();
-        Set CS = new Set();
-        Set TS = new Set();
+       
+            List<WebSites> CSlist;
+            List<WebSites> TSlist;
+            if(true){
 
-        System.out.println(dati.cat.size());
-       Random rn = new Random();
-        
+            float total=0.0f;
+            int index = 0, min = 1, max = 100;
+           LinkExtractor l1 = new LinkExtractor("C://Users/Lee/Desktop/dati.u8");
+            Set dati = l1.getLinks();
+            Set CS = new Set();
+            Set TS = new Set();
+
+            System.out.println(dati.cat.size());
+           Random rn = new Random();
 
 
-        for (int i = 0; i < dati.cat.size(); i++) {
-            if ((rn.nextInt(max - min + 1) + min) >= 80) {
-                CS.cat.add(dati.cat.get(i));
-                CS.url.add(dati.url.get(i));
-            } else {
-                TS.cat.add(dati.cat.get(i));
-                TS.url.add(dati.url.get(i));
+
+            for (int i = 0; i < dati.cat.size(); i++) {
+                if ((rn.nextInt(max - min + 1) + min) >= 90) {
+                    CS.cat.add(dati.cat.get(i));
+                    CS.url.add(dati.url.get(i));
+                } else {
+                    TS.cat.add(dati.cat.get(i));
+                    TS.url.add(dati.url.get(i));
+                }
             }
+
+            System.out.println("Nel CS ci sono "+CS.cat.size()+" siti");
+            System.out.println("Nel TS ci sono "+TS.cat.size()+" siti");
+
+             CSlist = getTokens(CS,true);
+             TSlist = getTokens(TS,false);
+
+            TSlist = parseSites(TSlist);
+             saveFile(CSlist,"C:\\Users\\Lee\\Desktop\\CS.ser");
+            saveFile(TSlist,"C:\\Users\\Lee\\Desktop\\TS.ser");
         }
-
-        System.out.println("Nel CS ci sono "+CS.cat.size()+" siti");
-        System.out.println("Nel TS ci sono "+TS.cat.size()+" siti");
-
-        List<WebSites> CSlist = getTokens(CS,true);
-        List<WebSites> TSlist = getTokens(TS,false);
-
-        saveFile(CSlist,"C:\\Users\\Lee\\Desktop\\CS.ser");
-        saveFile(TSlist,"C:\\Users\\Lee\\Desktop\\TS.ser");
-        
-        //List<WebSites> CSlist = loadFile("C:\\Users\\Lee\\Desktop\\CS.ser");
-       // List<WebSites> TSlist = loadFile("C:\\Users\\Lee\\Desktop\\TS.ser");
-        
+        else
+        {
+            CSlist = loadFile("C:\\Users\\Lee\\Desktop\\CS.ser");
+            TSlist = loadFile("C:\\Users\\Lee\\Desktop\\TS.ser");
+        }
 
         System.out.println("Nel CS ci sono "+CSlist.size()+" siti");
         System.out.println("Nel TS ci sono "+TSlist.size()+" categorie");
+        for (int i=0;i<TSlist.size();i++)
+            System.out.println(TSlist.get(i).cat);
         int tr=0;
         boolean truep=false;
-
+        int corto=0;
         for (int i=0;i<CSlist.size();i++)
         {
+            
+        if(CSlist.get(i).count.size()>10){
          truep= Classify(CSlist.get(i),TSlist);
          if(truep)
              tr++;
         }
-        System.out.println("TP: "+tr+" su "+CSlist.size());
+        else
+            corto++;
+        }
+        System.out.println("TP: "+tr+" su "+(CSlist.size()-corto));
     }
 
     public static int getIndex(String s) {
@@ -111,98 +128,61 @@ public class WebPagesClassificator {
         return val;
     }
 
-    public static List<WebSites> getTokens(Set temp, boolean iscs) throws MalformedURLException, ProtocolException, IOException {
+    public static List<WebSites> getTokens(Set temp, boolean iscs) throws InterruptedException{
 
+        int val1=0,val2=0,count=0;
+        int numT=0;
+        List<CatCreator> t1 = new ArrayList<CatCreator>();
         String categ = temp.cat.get(0);
         int val = getIndex(temp.cat.get(0));
         categ = categ.substring(0,val);
-        String text = null;
-        List<WebSites> db= new ArrayList<WebSites>();;
-        for (int k = 0; k < temp.url.size(); k++) {
-
-        try {
-            System.out.println(k+" of "+temp.url.size());
-            URL oracle = new URL(temp.url.get(k));
-            HttpURLConnection connection = null;
-            connection = (HttpURLConnection) oracle.openConnection();
-            connection.setRequestMethod("HEAD");
-            HashMap<String, Float> h = new HashMap<String, Float>();
-            System.out.println(temp.url.get(k).substring(7,temp.url.get(k).length()-1));
-            if( connection.getResponseCode()==200){
-
-                    
-                    System.out.println(oracle);
-                    
-                    System.out.println("I smell the memems");
-                    BufferedReader in = new BufferedReader(new InputStreamReader(oracle.openStream()));
-                    System.out.println(in.readLine());
-                    System.out.println("I need the memems");
-                    String inputLine;
-                    
-                    if(in.ready())
-                    while ((inputLine = in.readLine()) != null) {
-                        System.out.println("Increase text");
-                        text = text + inputLine;
-                    }
+        List<WebSites> db= new ArrayList<WebSites>();
+        for (int k = 0; k < temp.url.size()-1; k++) 
+        {
+            
       
-                    System.out.println("Fine increase text");
-                    in.close();
-                    Document doc = Jsoup.parse(text);
-                    String s = doc.body().text();
-
-                    int j = 0;
-                    boolean beenthere = false;
-                    Stack stack = new Stack();
-                    Pattern p1 = Pattern.compile("[a-zA-Z0-9'$€-]");
-                    Pattern p2 = Pattern.compile("[0-9]");
-                    char[] schr = s.toCharArray();
-                    char[] token = null;
-
-                    String tmp;
-
-                    for (int i = 0; i < s.length(); i++) {
-                        tmp = s.substring(i, i + 1);
-
-                        if (p1.matcher(tmp).find() && !p2.matcher(tmp).find()) {
-                            stack.push(schr[i]);
-                        } else if (stack.size() != 0) {
-                            beenthere = true;
-                            token = new char[stack.size()];
-                            j = 0;
-                            while (!stack.isEmpty()) {
-                                token[j++] = (char) stack.pop();
-                            }
-
-                            String[] tokens = new String[j];
-                            String tmp2 = String.valueOf(token);
-                            tmp2 = new StringBuilder(tmp2).reverse().toString();
-                            tmp2 = tmp2.toLowerCase();
-                            if(tmp2.length()>1 && !tmp.equals("null")){
-                            if (h.get(tmp2) == null) {
-                                h.put(tmp2, 1.0f);
-                            } else {
-                                h.replace(tmp2, h.get(tmp2) + 1);
-                            }
-                            }
-                        }
-
-                    }
-
-
-                    text = null;
-                    if (!categ.equals(temp.cat.get(k+1).substring(0, val)) || iscs) {
-
-                        db.add(new WebSites(h,categ));
-                        val = getIndex(temp.cat.get(k+1));
-                        categ = temp.cat.get(k+1).substring(0, val);
-                        h = new HashMap<String, Float>();
-
-
-                    }
-                    }
-                } catch (Exception e) {e.toString();}
-            }
+                t1.add(new CatCreator(temp,iscs,k,k+1));   
+                val1=val2;
+                numT=0;
+            
+            val2++;
         
+
+          /*  if ( k==temp.url.size()-1 || (iscs || !categ.equals(temp.cat.get(k+1).substring(0, getIndex(temp.cat.get(k+1)))) )) 
+             {
+                System.out.println(val1+" "+val2);
+                t1.add(new CatCreator(temp,iscs,val1,val2));   
+                val1=val2;
+                val = getIndex(temp.cat.get(k+1));
+                categ = temp.cat.get(k+1).substring(0, val);
+             }
+            val2++;*/
+        }
+
+        int giri = (t1.size() + 30 - 1) / 30;
+        for (int x = 0; x < giri; x++) {
+           
+            for (int i = 30 * x; i < 30 * (x + 1) && i < t1.size(); i++) {
+                t1.get(i).start();
+               // executor.execute(t1.get(i));
+            }
+ 
+            for (int i = 30 * x; i < 30 * (x + 1) && i < t1.size(); i++) {
+                t1.get(i).join();
+                t1.get(i).interrupt();
+            }
+            System.gc();
+        }
+ 
+        for (int i = 0; i < t1.size(); i++) {
+            if (t1.get(i).getValue() != null) {
+                db.add(t1.get(i).getValue());
+            }
+ 
+        }
+ 
+        System.out.println(db.size());
+
         return db;
     }
     
@@ -211,6 +191,7 @@ public class WebPagesClassificator {
         
         HashMap<String, Float> map = new HashMap<String, Float>();
         int occ=0;
+        float val=0;
         for (int i=0;i<TS.size();i++)
             map.put(TS.get(i).cat, 0.0f);
         
@@ -219,27 +200,36 @@ public class WebPagesClassificator {
         {
             for (int i=0;i<TS.size();i++)
             {  
+                
                 if(TS.get(i).count.get(s) != null)
                 {
                     occ=(int) (occ+TS.get(i).count.get(s));
                 }
                 
             }
+
             for (int i=0;i<TS.size();i++)
             {
+                for ( Entry<String, Float> entry: TS.get(i).count.entrySet() )
+                {
+                    val+= entry.getValue();
+                }
 
                 if(occ>0 && TS.get(i).count.get(s) != null)
                 {
                     
                    // occ=(int) Math.sqrt(occ);   
-                    float freqCat = (((TS.get(i).count.get(s)*TS.get(i).count.get(s))/occ)*1/TS.get(i).count.size());
+                    //val = TS.get(i).count.size();
+                    float freqCat = (((TS.get(i).count.get(s))/occ)*1/val);
                     // System.out.println("La stringa "+s+" ha frequenza "+freqCat+" appare in "+TS.get(i).cat+" "+ TS.get(i).count.get(s)+" volte, nella sua cat ci sono "+TS.get(i).count.size()+" parole. In tutte le cat appare "+occ+" volte");
                    
                     map.replace(TS.get(i).cat, map.get(TS.get(i).cat)+(freqCat));
                 
                 }
+                val=0;
             }
             occ=0;
+            
         }
         
       
@@ -247,7 +237,7 @@ public class WebPagesClassificator {
         Map.Entry<String, Float> maxEntry1 = null;
         Map.Entry<String, Float> maxEntry2 = null;
         Map.Entry<String, Float> maxEntry3 = null;
-
+      //  System.out.println(map);
         for (Map.Entry<String, Float> entry : map.entrySet())
         {
             if (maxEntry1 == null || entry.getValue().compareTo(maxEntry1.getValue()) > 0)
@@ -265,7 +255,7 @@ public class WebPagesClassificator {
                 maxEntry2 = entry;
                 
             }
-        }     
+        }       
         map.remove(maxEntry2.getKey());
 
         for (Map.Entry<String, Float> entry : map.entrySet())
@@ -275,13 +265,18 @@ public class WebPagesClassificator {
                 maxEntry3 = entry;
                 
             }
-        }     
+        }       
         map.remove(maxEntry3.getKey());
+
 
         
       //  System.out.println("Predicted: "+maxEntry.getKey()+" Actual category: "+h.cat);     // Print the key with max value
   
-        if(maxEntry1.getKey().equals(h.cat) || maxEntry2.getKey().equals(h.cat) || maxEntry3.getKey().equals(h.cat))
+      System.out.println("Predetta: "+maxEntry1.getKey()+" OR "+maxEntry2.getKey()+" OR "+maxEntry3.getKey()+". Actual: "+h.cat);
+      System.out.println(h.count+"\n");
+      
+      
+        if(maxEntry1.getKey().equals(h.cat) || maxEntry2.getKey().equals(h.cat)|| maxEntry3.getKey().equals(h.cat) )
             return true;
         
         return false;
@@ -326,6 +321,52 @@ public class WebPagesClassificator {
     }
     
 
+    public static List<WebSites> parseSites(List<WebSites> incom)
+    {
+        for (int i=0;i<incom.size();i++)
+            System.out.println(incom.get(i).cat);
+        int i=0,j=0;
+        List<WebSites> temp = new ArrayList<WebSites>(incom);
+        int max=temp.size();
+        while (i<max)
+        {
+            while ( j<max)
+            {
+               // System.out.println("PRIMA:"+ temp.get(j).cat+" SECONDA: "+ incom.get(i).cat);
+            if(i!=j  && temp.get(j).cat.equals(incom.get(i).cat))
+                {
+                    System.out.println("PRIMA: "+i+" "+incom.get(i).cat +" SECONDA: "+j+" "+ temp.get(j).cat);
+                  for ( String s: temp.get(j).count.keySet() )
+                  {
+                      
+                        if (incom.get(i).count.get(s) == null) {
+                                incom.get(i).count.put(s, 1.0f);
+                                //temp.get(j).count.remove(s);
+                            } else {
+                                incom.get(i).count.replace(s, incom.get(i).count.get(s)+temp.get(j).count.get(s));
+                               // temp.get(j).count.remove(s);
+                            }
+                  }
+                  
+                  temp.remove(j);
+                  incom.remove(j);
+                  max--;
+                  if(i>1)
+                  i--;
+                }
+                 j++;   
+            }
+            j=0;
+            i++;
+        }
+        for (int p=0;p<incom.size();p++)
+        {
+            if(incom.get(p).count.isEmpty()){
+                System.out.println("vuoto");
+                incom.remove(p);
+            }
+        }
+        return incom;
+    }
 }
-
 
